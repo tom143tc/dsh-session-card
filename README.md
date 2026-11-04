@@ -24,7 +24,7 @@
 
 ## 安装
 
-要求 **DSH 0.2.2+**（桌面端或 `dsh web` 均可），Node 20+。
+要求 **DSH 0.2.1-rc.2+**（桌面端或 `dsh web` 均可），Node 20+。
 
 ### 桌面端（推荐）
 
@@ -116,7 +116,7 @@ cordis.patch.yml     # 插件装载补丁
 
 Session cards for DeepSeek Harness. Adds a **Cards** tab to the conversation canvas where sessions become draggable cards with three layouts — grid, matrix (3×3 or 3×4), and freeform. Cards show the real conversation tail, can be resized from any edge, minimized, maximized (Esc to restore), and sent to a **native floating window** with position memory and drag-back-to-dock. Each card has an inline composer that posts to its own session without switching the current one.
 
-- Requires DSH 0.2.2+, Node 20+.
+- Requires DSH 0.2.1-rc.2+, Node 20+.
 - Install: `dsh plugin --profile <profile> add github:tom143tc/dsh-session-card`, then restart.
 - Floating windows need an Electron binary (env `DSH_CARDS_ELECTRON`, or `~/.dsh/electron/...`); without it only pop-out is disabled.
 - Degrades L0→L4 (tab → overlay → header button → read-only → no UI) instead of breaking.

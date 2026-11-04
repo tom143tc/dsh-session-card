@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-cards",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "description": "Session cards for DeepSeek Harness: draggable conversation cards on a board inside the session canvas, plus native floating windows.",
   "license": "MIT",
@@ -31,7 +31,7 @@
   ],
   "engines": {
     "node": ">=20",
-    "dsh": ">=0.2.2"
+    "dsh": ">=0.2.1-rc.2"
   },
   "scripts": {
     "test": "node --test test/",
