@@ -19,7 +19,7 @@
 | 检查项 | 结果 |
 |---|---|
 | 卡片「⧉ 弹出」按钮 | 点击后 `POPOUT-HTTP 200`，butler 自动拉起 |
-| 原生窗口 | 出现，标题 `DSH · PSA项目实施监督 — DeepSeek Harness` |
+| 原生窗口 | 出现，标题 `DSH · <会话标题> — DeepSeek Harness` |
 | 可拖动 | `health.windows[0].movable === true`，原生标题栏可拖（截图见 `docs/p2-native.png`）|
 | 可缩放 | `resizable === true` |
 | 总会话内容 | 浮窗内直接打开目标会话，侧栏/右栏隐藏，输入区保留 |
