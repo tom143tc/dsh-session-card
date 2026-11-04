@@ -1,126 +1,175 @@
 # dsh-session-cards
 
-把 DeepSeek Harness 的会话做成**卡片桌布**：在会话详情画布上铺开一桌卡片，支持网格 / 宫格 / 自由三种布局，可拖动、拖边缘缩放、最小化、最大化，也能把任意一张卡片弹出成**原生独立窗口**。
+把 DeepSeek Harness（DSH）的会话做成**卡片桌布**：在会话详情画布上铺开一桌卡片，
+拖动、缩放、最小化、最大化，也能把任意一张卡片弹出成**原生独立窗口**。
 
-![卡片桌布 · 宫格](design/preview/board-v3-matrix.png)
+- 版本：**0.4.3** · 要求 DSH **0.2.1-rc.2+** · License MIT
+- 已在 macOS + DSH NEXT Desktop（0.2.2）与 `dsh web`（0.2.1-rc.2）上实测
 
-![卡片桌布 · 最大化（卡片内输入）](design/preview/board-v3-max.png)
+![卡片桌布 · 网格](assets/screens/board-grid.png)
 
----
+<p align="center"><sub>网格布局：卡片按跨度占位，可拖、可拖边缘缩放</sub></p>
+
+## 目录
+
+- [功能](#功能)
+- [安装](#安装)
+- [使用](#使用)
+- [数据与隐私](#数据与隐私)
+- [兼容与降级](#兼容与降级)
+- [已知限制](#已知限制)
+- [开发](#开发)
+- [版本与发布](#版本与发布)
 
 ## 功能
 
-- **卡片桌布占满会话画布**：以「卡片桌布」页签加入会话视图（`conversation.view`），不替换会话根界面，输入区、会话头、侧栏都保留。
-- **三种布局**
-  - **网格**：自由网格，可拖到任意空位、落到已占格则交换；拖动时连续跟手、松手吸附格子。
-  - **宫格**：九宫格（≤9 张）/ 十二宫格（10–12 张），等大铺满、不滚动。
-  - **自由**：绝对定位，卡片可重叠；拖动移动、拖四边/四角缩放（左/上边缘会真正向外生长）。
-- **卡片内容 = 真实会话记录**：标题、状态色点、最后几轮对话、工作区、时间；条数随卡片尺寸变化。
-- **卡片内直接发消息**：悬停出现输入条（Enter 发送 / Shift+Enter 换行），走插件 host 路由调用宿主的 `sessionController.prompt`，**不切换当前会话**。
-- **三态**：标准、最小化（底部 dock，点击还原）、最大化（铺满画布，Esc 还原）。
-- **原生浮窗**：卡片右上角 `⧉` 弹出独立窗口；原生标题栏可拖动、可缩放、位置/尺寸记忆、拖回主窗自动收回、可选置顶、同会话去重、最多 8 个窗口。
-- **主题跟随**：light / dark / system 跟随宿主；颜色使用 `--dsw-alias-*` 并提供兜底色。
-- **可降级、抗升级**：只依赖公开契约；宿主缺少某个 slot/服务时按 L0→L4 逐级降级（页签 → 浮层 → 头部按钮 → 只读 → 不注册 UI），不会白屏。
+**三种布局**
+
+| 布局 | 行为 |
+| --- | --- |
+| 网格 | 卡片占 1–4 × 1–4 格；拖到空位就落位，拖到已占格则交换；拖边缘/角连续缩放，松手吸附到格 |
+| 宫格 | 均分铺满：≤9 张 3×3，10–12 张 3×4；窄窗（<720px）退 2 列 |
+| 自由 | 绝对定位，卡片可任意移动、叠放；拖四边/四角缩放（左/上边缘向外生长） |
+
+**卡片内容**
+
+- 真实会话记录：用户气泡、助手正文（渲染粗体/行内代码），工具调用行只在**最大化**时显示
+- 标题、状态色点、工作区、相对时间；对话条数随卡片尺寸变化
+- 已过滤 DSH 注入的上下文块（runtime context、技能目录、压缩摘要等），不会把注入文本当对话展示
+
+**卡片内发消息**
+
+- 默认只显示最后一行；鼠标移入卡片才浮出输入条（`Enter` 发送、`Shift+Enter` 换行、中文输入法选词不误发）
+- 走插件 host 路由调用宿主的 `sessionController.prompt`，**不切换当前会话**
+- 发送成功后清空草稿并刷新该卡片的对话
+
+![悬停出现输入条与操作按钮](assets/screens/card-hover.png)
+
+**卡片操作**
+
+| 按钮 | 作用 |
+| --- | --- |
+| `−` | 最小化到画布底部 dock，点击还原 |
+| `⧉` | 弹出为原生独立窗口 |
+| `⤢` / `⤡` | 最大化铺满画布 / 还原（最大化时 `Esc` 也可退出） |
+| `✕` | 从桌布移除（不删除会话） |
+
+**原生浮窗**（细节见下）
+
+- 自建 Electron 管家进程，只通过公开 `webServer`/`connection` 与插件通信，不碰 desktop 私有 API
+- 原生标题栏，可拖动、可缩放；默认 520×420，多开按 +28px 级联
+- 记住每个窗口的位置和尺寸；拖回主窗口自动收回；同会话去重；最多 8 个窗口
+- 默认**不置顶**，需要时点浮窗里的「📌 置顶」
+
+**主题**：light / dark / system 跟随宿主；输入条、按钮、卡片文字都给明暗两套色值。
 
 ## 安装
 
-要求 **DSH 0.2.1-rc.2+**（桌面端或 `dsh web` 均可），Node 20+。
-
-### 桌面端（推荐）
-
-在 DSH 的插件页安装，或：
+### 桌面端 / dsh web（GitHub）
 
 ```sh
 dsh plugin --profile desktop add github:tom143tc/dsh-session-card
+# 或
+dsh plugin --profile web add github:tom143tc/dsh-session-card
 ```
 
-也可以指向本地目录（开发时）：
+安装后**完全退出**并重启 DSH NEXT（`dsh web` 则重启进程并刷新页面）。
+
+> 该安装路径已在 `dsh 0.2.1-rc.2` 上实测通过（安装 0.4.3）。桌面端 0.2.2 直接运行同一份代码。
+
+### 本地开发
 
 ```sh
 dsh plugin --profile desktop add file:/absolute/path/to/dsh-session-card
 ```
 
-然后完全退出并重启 DSH NEXT。
-
-### dsh web
-
-```sh
-dsh plugin --profile web add github:tom143tc/dsh-session-card
-```
-
-重启 `dsh web`，刷新页面。
-
 ### 原生浮窗的前置条件
 
-浮窗由插件自建的 Electron 管家进程提供，**不依赖 desktop 的私有 API**。需要本机存在 Electron 可执行文件，按以下顺序查找：
+浮窗依赖本机可执行的 Electron，按顺序查找：
 
 1. 环境变量 `DSH_CARDS_ELECTRON` 指向的可执行文件
-2. `~/.dsh/electron/Electron.app/Contents/MacOS/Electron`（macOS）
-3. 同名目录下的 Windows / Linux 路径
+2. macOS：`~/.dsh/electron/Electron.app/Contents/MacOS/Electron`
+3. Windows / Linux：同名目录下的对应可执行文件
 
-找不到时只有「弹出浮窗」不可用（返回 `NO_ELECTRON`），桌布与卡片输入不受影响。
+找不到时弹出会返回 `NO_ELECTRON`，卡片桌布本身不受影响。
 
 ## 使用
 
-1. 打开任意会话 → 点顶部「卡片桌布」页签。
-2. 从左侧会话列表**拖入**，或点工具栏「＋ 当前会话」。
-3. 工具栏：`自动排列` / `⟳ 刷新` / `▦ 网格` / `▦ 宫格` / `◱ 自由`。
-4. 卡片右上角悬停出现：`—` 最小化、`⧉` 弹出浮窗、`⤢` 最大化、`✕` 从桌布移除。
-5. 拖卡片边缘缩放；自由布局下左/上边缘会向外生长。
-6. 悬停卡片底部出现输入条，可直接向该会话发消息。
+1. 打开任意会话，点击画布顶部页签 **卡片桌布**
+2. 点 **＋ 当前会话** 把当前会话加进桌布（上限 12 张）
+3. 从左侧会话列表把会话**拖进画布**也可以加卡
+4. 切 **网格 / 宫格 / 自由** 换布局；**自动排列** 按更新时间/运行中优先重排
+5. 悬停卡片：右上出现操作按钮，底部浮出输入条
+6. 点 `⧉` 弹出原生窗口；在浮窗里点「回到画布」或直接把窗口拖回主窗口即可收回
 
 ## 数据与隐私
 
-- 桌布布局保存在浏览器 `localStorage`（键 `dsh-session-cards/board/v1`，按宿主 origin 隔离）。
-- 浮窗状态（窗口位置/尺寸/置顶/管家信息）在 `~/.dsh/dsh-session-cards/`（文件权限 0600）。
-- 卡片内容通过插件 host 的只读接口 `/plugins/dsh-session-cards/transcript` 从会话日志读取（`sessionQuery.readSession`），**不修改会话记录**。
-- 插件不发起任何外部网络请求；浮窗管家只监听 `127.0.0.1` 随机端口并使用一次性 token。
+| 数据 | 位置 |
+| --- | --- |
+| 桌布布局（卡片、布局、跨度/矩形、最大化） | 宿主 `localStorage` 的 `dsh-session-cards/board/v1` |
+| 上次手动调整的卡片尺寸 | `localStorage` 的 `dsh-session-cards/default-span/v1` |
+| 浮窗管家信息 / 窗口位置 / 错误日志 | `~/.dsh/dsh-session-cards/`（JSON 权限 `0600`） |
+
+- 会话内容只读（`GET /plugins/dsh-session-cards/transcript`），不写入宿主存储
+- 发消息只经过宿主公开的 `sessionController.prompt`
+- 卡片上限 12 是数据层硬限制
 
 ## 兼容与降级
 
-| 能力 | 缺失时的行为 |
-|---|---|
-| `conversation.view` | 注册右侧浮层（L1），顶部提示「当前版本以浮层模式运行」 |
-| 浮层 slot 也没有 | 在会话头部注册「卡片桌布」按钮（L2） |
-| 会话服务不可用 | 只读模式（L3）：只显示标题/状态，禁止拖拽与写入 |
-| 连头部按钮都注册失败 | 不注册 UI（L4），写诊断报告，设置页可见原因 |
+插件只依赖公开契约（slot / service / webServer / connection / theme / sessions）。
+宿主缺少某个能力时按级降级，不白屏、不抛错：
 
-不修改宿主 DOM 语义、不注入 preload、不使用 `desktopRuntime` 等私有服务；DOM 侧仅做「尽力而为」的增强（如侧栏拖入），失败时退回工具栏按钮。
+| 级别 | 触发条件 | 表现 |
+| --- | --- | --- |
+| L0 | `conversation.view` 可用 | 卡片桌布页签（完整功能） |
+| L1 | 页签不可用、`shell.overlay` 可用 | 右侧 560px 降级浮层 |
+| L2 | 前两者都不可用、`conversation.session.header.actions` 可用 | 会话头部按钮打开浮层 |
+| L3 | 会话目录不可读 | 只读模式，禁用拖拽/发送 |
+| L4 | 以上都不可用 | 不注册任何 UI，写 `compat-report.json` 并在设置页说明原因 |
 
 ## 已知限制
 
-- 桌布最多 12 张卡片（按画布容量设计）。
-- 卡片正文来自会话日志投影，工具调用行只在最大化时显示。
-- 原生浮窗目前在 macOS 实测；Windows / Linux 未验证。
-- 宿主升级若改动插件加载协议本身，插件无法自救，只能跟随适配。
+- 卡片上限 12 张；宫格在窄窗下会退成 2 列
+- 自由布局允许卡片重叠（这是它的用途，不是 bug）
+- 轮次/Token 摘要只在宿主提供 `projectionValues.sessionStats` 时显示，多数会话没有
+- 原生浮窗只在 macOS 实测；Windows / Linux 未验证
+- 工具调用行只在最大化时显示
 
 ## 开发
 
 ```sh
-npm test                 # node --test test/
-npm run build:client     # 把 src/lib + src/client 内联成单文件 client.js
+node --test test/            # 纯函数测试（layout / board / caps）
+node scripts/build-client.mjs  # 把 src/lib + src/client 内联成 client.js
+npm pack --dry-run           # 检查发布内容
 ```
 
-目录：
+仓库结构：
 
 ```
-index.js             # host 半侧：prompt / transcript / popout 路由
-client.js            # 由 scripts/build-client.mjs 生成的浏览器半侧（已提交）
-src/lib/             # 纯函数：布局、桌布模型、能力判定（含单测）
-src/client/          # 客户端 UI：桌布、卡片、输入、降级注册
-popout/main.cjs      # 自建 Electron 管家（窗口、位置记忆、拖回收回）
-cordis.patch.yml     # 插件装载补丁
+src/lib/       纯函数：布局计算（layout）、桌布模型（board）、能力探测（caps）
+src/client/    浏览器侧：ui.js（渲染与交互）、apply.js（探测与挂载）
+index.js       host 侧：prompt / transcript / popout 路由
+popout/        Electron 管家（原生窗口）
+scripts/       build-client.mjs
+test/          node:test 用例
+design/ docs/  设计与证据（历史产物，非运行代码）
+releases/      版本快照
 ```
+
+## 版本与发布
+
+- 当前 **0.4.3**（相对 0.4.2 仅改 `engines.dsh`，代码未变）
+- `0.4.2` 已锁定：`LOCK.md` + `releases/0.4.2/SHA256SUMS`
+- 改动流程：改源码 → `node --test` → `build-client.mjs` → 升版本 → 安装验证
 
 ## English
 
-Session cards for DeepSeek Harness. Adds a **Cards** tab to the conversation canvas where sessions become draggable cards with three layouts — grid, matrix (3×3 or 3×4), and freeform. Cards show the real conversation tail, can be resized from any edge, minimized, maximized (Esc to restore), and sent to a **native floating window** with position memory and drag-back-to-dock. Each card has an inline composer that posts to its own session without switching the current one.
+Session cards for DeepSeek Harness: a board of live sessions on the conversation
+canvas with grid / matrix / free layouts, drag-to-move and edge-resize, hover
+composer, and native floating windows (self-hosted Electron butler, no private
+desktop APIs).
 
-- Requires DSH 0.2.1-rc.2+, Node 20+.
-- Install: `dsh plugin --profile <profile> add github:tom143tc/dsh-session-card`, then restart.
-- Floating windows need an Electron binary (env `DSH_CARDS_ELECTRON`, or `~/.dsh/electron/...`); without it only pop-out is disabled.
-- Degrades L0→L4 (tab → overlay → header button → read-only → no UI) instead of breaking.
+Install: `dsh plugin --profile desktop add github:tom143tc/dsh-session-card`
+(requires DSH >= 0.2.1-rc.2; restart afterwards).
 
-## License
-
-MIT
+MIT License.
