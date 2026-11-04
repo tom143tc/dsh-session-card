@@ -4,16 +4,13 @@
 
 <h1 align="center">dsh-session-cards</h1>
 
-<p align="center">把 DeepSeek Harness（DSH）的会话做成**卡片桌布**</p>
-
 <p align="center">
   <img alt="version" src="https://img.shields.io/badge/version-0.4.3-5b6bff">
   <img alt="dsh" src="https://img.shields.io/badge/dsh-%3E%3D0.2.1--rc.2-7a5cff">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-2ea44f">
 </p>
 
-把 DeepSeek Harness（DSH）的会话做成**卡片桌布**：在会话详情画布上铺开一桌卡片，
-拖动、缩放、最小化、最大化，也能把任意一张卡片弹出成**原生独立窗口**。
+<p align="center">把 DeepSeek Harness（DSH）的会话做成**卡片桌布**：在会话详情画布上铺开一桌卡片，拖动、缩放、最小化、最大化，也能把任意一张卡片弹出成**原生独立窗口**。</p>
 
 - 版本：**0.4.3** · 要求 DSH **0.2.1-rc.2+** · License MIT
 - 已在 macOS + DSH NEXT Desktop（0.2.2）与 `dsh web`（0.2.1-rc.2）上实测
